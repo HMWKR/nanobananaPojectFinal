@@ -2,6 +2,7 @@ from pathlib import Path
 from django.shortcuts import render
 from django.conf import settings
 from PIL import Image
+import base64
 from .forms import ImageGenerationForm
 from generator.gemini_multi import run_generation
 
@@ -55,13 +56,21 @@ def generate_view(request):
             context['error'] = "생성 실패\n서버 콘솔 확인"
             return render(request, 'web/generate.html', context)
         
-        # URL 변환
+        # Base64 인코딩으로 변환
         images = []
         for file_path in files:
-            rel = Path(file_path).relative_to(settings.MEDIA_ROOT)
-            url = f"{settings.MEDIA_URL}{rel}".replace('\\', '/')
-            name = Path(file_path).name
-            images.append({'url': url, 'name': name})
+            try:
+                with open(file_path, 'rb') as img_file:
+                    img_data = img_file.read()
+                    base64_img = base64.b64encode(img_data).decode('utf-8')
+                    name = Path(file_path).name
+                    images.append({
+                        'base64': f"data:image/png;base64,{base64_img}",
+                        'name': name,
+                        'data': base64_img  # 다운로드용
+                    })
+            except Exception as e:
+                print(f"이미지 인코딩 오류: {e}")
         
         context['images'] = images
         context['form'] = ImageGenerationForm()
