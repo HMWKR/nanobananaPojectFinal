@@ -124,6 +124,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # CSRF 설정
+CSRF_TRUSTED_ORIGINS = []
 csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 if csrf_origins:
     CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(',')]
