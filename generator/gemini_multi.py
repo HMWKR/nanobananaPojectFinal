@@ -123,7 +123,7 @@ def generate_single_shot(
 
             # 이미지 생성 요청
             resp = client.models.generate_content(
-                model="gemini-2.0-flash-exp",
+                model="gemini-2.5-flash-image",
                 contents=contents
             )
 
