@@ -124,8 +124,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # CSRF 설정
-CSRF_TRUSTED_ORIGINS = [
-    'https://nanobananapojeetfinal-production.up.railway.app',
-]
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# CSRF 설정
+if not DEBUG:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://nanobananapojeetfinal-production.up.railway.app',
+    ]
+else:
+    CSRF_TRUSTED_ORIGINS = []
