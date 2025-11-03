@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini 이미지 생성기</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        header {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .form-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .checkbox-item {
+            background: #f9fafb;
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; }
+        
+        /* 로딩 */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading.show { display: flex; }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            white-space: pre-line;
+        }
+        
+        /* 이미지 갤러리 */
+        .gallery {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .gallery h2 {
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .img-item {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .img-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.3);
+        }
+        
+        .img-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* 호버 오버레이 */
+        .hover-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .img-item:hover .hover-overlay {
+            opacity: 1;
+        }
+        
+        .download-btn {
+            background: white;
+            color: #667eea;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        
+        .download-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        /* 확대 모달 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+        }
+        
+        .modal.show { display: flex; justify-content: center; align-items: center; }
+        
+        .modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .modal-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 10px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 40px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .modal-close:hover { color: #667eea; }
+        
+        .modal-download {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #667eea;
+            color: white;
+            padding: 15px 35px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .modal-download:hover {
+            background: #764ba2;
+            transform: translateX(-50%) scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- 로딩 -->
+    <div class="loading" id="loading">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h2>🎨 AI가 이미지 생성 중...</h2>
+            <p>10초~2분 소요됩니다</p>
+        </div>
+    </div>
+    
+    <!-- 모달 -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <img id="modalImg" src="" alt="">
+            <a id="modalDl" class="modal-download" download>📥 다운로드</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1>🎨 Gemini 이미지 생성기</h1>
+            <p>AI가 다양한 구도로 이미지를 생성합니다</p>
+        </header>
+        
+        {% if error %}
+        <div class="error"><strong>⚠️ 오류:</strong><br>{{ error }}</div>
+        {% endif %}
+        
+        <div class="form-box">
+            <form method="post" enctype="multipart/form-data" id="form">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label>🔑 API Key</label>
+                    {{ form.api_key }}
+                </div>
+                
+                <div class="form-group">
+                    <label>🖼️ 참조 이미지</label>
+                    {{ form.reference_image }}
+                </div>
+                
+                <div class="form-group">
+                    <label>📁 출력 폴더</label>
+                    {{ form.output_dir }}
+                </div>
+                
+                <div class="form-group">
+                    <label>🎬 생성할 샷 (선택 안 하면 전체)</label>
+                    <div class="checkbox-group">
+                        {% for choice in form.shots %}
+                        <div class="checkbox-item">
+                            {{ choice.tag }}
+                            <label for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn" id="btn">🚀 생성하기</button>
+            </form>
+        </div>
+        
+        {% if images %}
+        <div class="gallery">
+            <h2>✨ 완료! ({{ images|length }}개)</h2>
+            <div class="grid">
+                {% for img in images %}
+                <div class="img-item" onclick="openModal('{{ img.url }}', '{{ img.name }}')">
+                    <img src="{{ img.url }}" alt="{{ img.name }}">
+                    <div class="hover-overlay">
+                        <a href="{{ img.url }}" download="{{ img.name }}" 
+                           class="download-btn" onclick="event.stopPropagation()">
+                            📥 다운로드
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+<script>
+    const form = document.getElementById('form');
+    const loading = document.getElementById('loading');
+    const btn = document.getElementById('btn');
+    
+    form.addEventListener('submit', function(e) {
+        const key = form.querySelector('[name="api_key"]').value.trim();
+        const img = form.querySelector('[name="reference_image"]').files.length;
+        
+        if (!key || !img) {
+            alert('API 키와 이미지를 모두 입력하세요!');
+            e.preventDefault();
+            return;
+        }
+        
+        loading.classList.add('show');
+        btn.disabled = true;
+    });
+    
+    function openModal(url, name) {
+        const modal = document.getElementById('modal');
+        const img = document.getElementById('modalImg');
+        const dl = document.getElementById('modalDl');
+        
+        modal.classList.add('show');
+        img.src = url;
+        dl.href = url;
+        dl.download = name;
+    }
+    
+    function closeModal() {
+        document.getElementById('modal').classList.remove('show');
+    }
+    
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+    });
+    
+    document.getElementById('modal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+</script>
+</body>
+</html>
